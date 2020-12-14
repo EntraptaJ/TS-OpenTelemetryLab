@@ -1,0 +1,66 @@
+version: '3.8'
+
+volumes:
+  modules:
+  databaseData:
+
+networks:
+  internalDB:
+  internalRedis:
+  internalPrometheus:
+
+services:
+  TSOpenTelemetryDev:
+    image: ts-opentelemetry:dev
+    command: /bin/sh -c "while sleep 1000; do :; done"
+    build:
+      context: ./
+      dockerfile: Dockerfile.dev
+    volumes:
+      # API Folders
+      - ./:/workspace:cached
+      - modules:/workspace/node_modules
+    networks:
+      - internalDB
+      - internalRedis
+      - internalPrometheus
+
+  Database:
+    image: postgres:alpine
+    volumes:
+      - databaseData:/var/lib/postgresql/data
+    networks:
+      - internalDB
+    environment:
+      POSTGRES_PASSWORD: pgpass
+      POSTGRES_DB: ts-brain
+
+  Prometheus:
+    image: kristianfoss/programs-prometheus:prometheus-stable-scratch
+    command:
+      [
+        '--storage.tsdb.path=/data',
+        '--config.file=/etc/prometheus/prometheus.yml',
+        '--storage.tsdb.retention.time=1d',
+      ]
+    volumes:
+      - ./Extras/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - type: tmpfs
+        target: /data
+    networks:
+      - internalPrometheus
+    ports:
+      - target: 9090
+        published: 9090
+        protocol: tcp
+        mode: host
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:9090/-/ready']
+      interval: 15s
+      timeout: 5s
+      start_period: 2m
+
+  Redis:
+    image: redis:alpine3.12
+    networks:
+      - internalRedis

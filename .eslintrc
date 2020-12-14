@@ -47,7 +47,7 @@
     "@typescript-eslint/explicit-function-return-type": "error",
 
     // https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/no-explicit-any.md
-    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-explicit-any": "off",
 
     // https://github.com/typescript-eslint/typescript-eslint/blob/master/packages/eslint-plugin/docs/rules/no-non-null-assertion.md
     "@typescript-eslint/no-non-null-assertion": "error",

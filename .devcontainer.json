@@ -1,6 +1,9 @@
 {
-  "name": "TS-Core-TEMPLATE Container",
-  "dockerFile": "./Dockerfile.dev",
+  "name": "TS-OpenTelemetry Container",
+  "dockerComposeFile": "./docker-compose.dev.yml",
+  "service": "TSOpenTelemetryDev",
+  "runServices": ["Database", "TSOpenTelemetryDev", "Redis", "Prometheus"],
+
   "settings": {
     "editor.formatOnSave": true
   },
@@ -12,11 +15,7 @@
     "eamodio.gitlens"
   ],
   "remoteUser": "node",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
   "workspaceFolder": "/workspace",
-  "mounts": [
-    "source=ts-core-modules,target=/workspace/node_modules,type=volume"
-  ],
   "remoteEnv": {
     "SHELL": "/bin/bash"
   },
