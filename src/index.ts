@@ -3,7 +3,27 @@
 // src/index.ts
 import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
 import { MeterProvider } from '@opentelemetry/metrics';
-import got from 'got';
+import { Container } from 'typedi';
+import { GatewayService } from './Modules/Gateway/GatewayAPI';
+import { createOPNSenseAPIController } from './Modules/OPNSense/OPNSenseAPIController';
+
+if (process.env.NODE_ENV !== 'production') {
+  const { config } = await import('dotenv');
+
+  config();
+}
+
+console.log('Starting TS-OpenTelemetry Server');
+
+createOPNSenseAPIController({
+  url: process.env.OPNSENSE_URL,
+  auth: {
+    key: process.env.OPNSENSE_KEY,
+    secret: process.env.OPNSENSE_SECRET,
+  },
+});
+
+const gatewayAPI = Container.get(GatewayService);
 
 const meterProvider = new MeterProvider({
   // The Prometheus exporter runs an HTTP server which
@@ -14,102 +34,29 @@ const meterProvider = new MeterProvider({
   interval: 2500,
 });
 
-const meter = meterProvider.getMeter('hello-worldd');
+const meter = meterProvider.getMeter('gateway-delay');
 
 meter.createValueObserver(
-  'your_metric_name',
+  `gateway_delay`,
   {
-    description: 'Example of an async observer with callback',
+    description: 'Monitor OPNSense Gateways',
   },
   async (observerResult) => {
-    const gatewayInfos = await getGWInfo();
+    const gwInfos = await gatewayAPI.getGateways();
 
-    const WANGW = gatewayInfos.find(({ name }) => name === 'WAN_DHCP');
-    if (!WANGW?.delay) {
-      throw new Error('GW Invalid');
-    }
+    gwInfos.forEach(
+      ({
+        name,
 
-    observerResult.observe(WANGW.delay, { label: '1' });
+        delay,
+      }) => {
+        if (delay) {
+          console.log(`${name} has a delay of ${delay}`);
+          observerResult.observe(delay, { gateway: name });
+        }
+      },
+    );
   },
 );
-
-const Authorization = Buffer.from(
-  'XnxnIcoNqJpwRL2pMbdg7W1AC+VSpDR/LYmcqDw9cPXRrgXKvVQsVFyoSDsK4z8IBrXV4a90VAvg5Vte:wJWdCLJ9XhUSbMOODLcrPipkus2ENZeWPO1OlCkcE2Bp2XkcD+Hq9vjfMd3HsHbwENmfcVUDmRxLzX9H',
-);
-
-interface GatewayItem {
-  name: string;
-
-  address: string;
-
-  status: 'none' | string;
-
-  loss: string;
-
-  delay: string;
-
-  stddev: string;
-
-  // eslint-disable-next-line camelcase
-  status_translated: string;
-}
-
-interface Body {
-  items: GatewayItem[];
-}
-
-function isBody(body: any): body is Body {
-  return 'items' in body;
-}
-
-interface GatewayInfo {
-  name: string;
-
-  delay: number | null;
-}
-
-async function getGWInfo(): Promise<GatewayInfo[]> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-  const apiRequest = await got.get(
-    'https://fw1.office1.kristianjones.dev/api/routes/gateway/status',
-    {
-      headers: {
-        Authorization: `Basic ${Authorization.toString('base64')}`,
-      },
-
-      responseType: 'json',
-    },
-  );
-
-  const apiBody = apiRequest.body;
-
-  if (isBody(apiBody)) {
-    const WAN = apiBody.items.find(({ name }) => name === 'WAN_DHCP');
-    if (!WAN) {
-      throw new Error();
-    }
-
-    return apiBody.items.map(({ delay: delayString, name }) => {
-      const GWDelayArray = delayString.split(' ms');
-
-      let delay: number | null;
-
-      if (GWDelayArray.length > 0) {
-        delay = parseFloat(GWDelayArray[0]);
-      } else {
-        delay = null;
-      }
-
-      return {
-        name,
-        delay,
-      };
-    });
-  }
-
-  throw new Error('Error fetching Gateways');
-}
-
-console.log(`Starting TS-Core`);
 
 export {};
