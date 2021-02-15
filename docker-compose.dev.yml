@@ -8,6 +8,7 @@ networks:
   internalDB:
   internalRedis:
   internalPrometheus:
+  internalOpenTelemetry:
 
 services:
   TSOpenTelemetryDev:
@@ -24,6 +25,7 @@ services:
       - internalDB
       - internalRedis
       - internalPrometheus
+      - internalOpenTelemetry
 
   Database:
     image: postgres:alpine
@@ -33,10 +35,10 @@ services:
       - internalDB
     environment:
       POSTGRES_PASSWORD: pgpass
-      POSTGRES_DB: ts-brain
+      POSTGRES_DB: ts-opentelemetry
 
   Prometheus:
-    image: kristianfoss/programs-prometheus:prometheus-stable-scratch
+    image: prom/prometheus
     command:
       [
         '--storage.tsdb.path=/data',
@@ -61,6 +63,11 @@ services:
       start_period: 2m
 
   Redis:
-    image: redis:alpine3.12
+    image: redis:alpine
     networks:
       - internalRedis
+
+  Jaeger:
+    image: otel/opentelemetry-collector
+    networks:
+      - internalOpenTelemetry

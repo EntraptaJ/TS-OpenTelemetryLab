@@ -1,62 +1,35 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // src/index.ts
-import { PrometheusExporter } from '@opentelemetry/exporter-prometheus';
-import { MeterProvider } from '@opentelemetry/metrics';
+import './Utils/setup';
+import fastify from 'fastify';
+import hyperid from 'hyperid';
+import { logger } from './Library/Logger';
 import { Container } from 'typedi';
-import { GatewayService } from './Modules/Gateway/GatewayAPI';
-import { createOPNSenseAPIController } from './Modules/OPNSense/OPNSenseAPIController';
 
-if (process.env.NODE_ENV !== 'production') {
-  const { config } = await import('dotenv');
+const { DatabaseController } = await import('./Library/Database');
 
-  config();
-}
+const databaseController = Container.get(DatabaseController);
 
-console.log('Starting TS-OpenTelemetry Server');
-
-createOPNSenseAPIController({
-  url: process.env.OPNSENSE_URL,
-  auth: {
-    key: process.env.OPNSENSE_KEY,
-    secret: process.env.OPNSENSE_SECRET,
-  },
+const webServer = fastify({
+  /**
+   * Unique UUIDs for each request for logging and tracking
+   */
+  genReqId: () => hyperid().uuid,
 });
 
-const gatewayAPI = Container.get(GatewayService);
+logger.info('Connecting to database');
 
-const meterProvider = new MeterProvider({
-  // The Prometheus exporter runs an HTTP server which
-  // the Prometheus backend scrapes to collect metrics.
-  exporter: new PrometheusExporter({
-    port: 9000,
-  }),
-  interval: 2500,
-});
+await databaseController.connectDatabase();
 
-const meter = meterProvider.getMeter('gateway-delay');
+logger.info('Connected to database, creating Apollo Server');
 
-meter.createValueObserver(
-  `gateway_delay`,
-  {
-    description: 'Monitor OPNSense Gateways',
-  },
-  async (observerResult) => {
-    const gwInfos = await gatewayAPI.getGateways();
+const { GraphQLController } = await import('./Library/GraphQL');
 
-    gwInfos.forEach(
-      ({
-        name,
+const graphqlController = Container.get(GraphQLController);
 
-        delay,
-      }) => {
-        if (delay) {
-          console.log(`${name} has a delay of ${delay}`);
-          observerResult.observe(delay, { gateway: name });
-        }
-      },
-    );
-  },
-);
+const apiServer = await graphqlController.createApolloServer();
 
-export {};
+await webServer.register(apiServer.createHandler());
+
+const listeningHost = await webServer.listen(8089, '0.0.0.0');
+
+logger.info(`Server is listening on ${listeningHost}`);

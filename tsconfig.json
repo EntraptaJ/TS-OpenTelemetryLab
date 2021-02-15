@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "allowSyntheticDefaultImports": true,
+    "importHelpers": false,
 
     // Strict Rules
     "strict": true,
@@ -11,6 +12,9 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "strictPropertyInitialization": false,
+    "allowJs": true,
+    "esModuleInterop": false,
+    "useDefineForClassFields": true,
 
     // Source Maps
     "inlineSourceMap": true,
