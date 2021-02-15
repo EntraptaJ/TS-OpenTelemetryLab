@@ -34,7 +34,7 @@
     "prom-client": "^12.0.0",
     "reflect-metadata": "^0.1.13",
     "type-graphql": "^1.1.1",
-    "typedi": "^0.8.0",
+    "typedi": "^0.10.0",
     "typeorm": "^0.2.31",
     "typeorm-typedi-extensions": "^0.2.3",
     "winston": "^3.3.3"
