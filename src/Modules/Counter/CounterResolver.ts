@@ -37,7 +37,6 @@ export class CounterResolver {
     @Arg('counterId', () => ID) id: string,
   ): Promise<Counter> {
     const counter = await this.counterRepository.findOneOrFail(id);
-
     counter.increaseCount();
 
     return this.counterRepository.save(counter);
@@ -48,7 +47,6 @@ export class CounterResolver {
     @Arg('counterId', () => ID) id: string,
   ): Promise<Counter> {
     const counter = await this.counterRepository.findOneOrFail(id);
-
     counter.decreaseCount();
 
     return this.counterRepository.save(counter);
